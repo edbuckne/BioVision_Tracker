@@ -26,9 +26,9 @@ cd(['SPM' num2str(spm,'%.2u')]);
 
 maxDis = zeros(1,3);
 if(size(varargin,2)<2)
-    maxDis(1) = input('What is the max shift distance in the x direction? ');
-    maxDis(2) = input('What is the max shift distance in the y direction? ');
-    maxDis(3) = input('What is the max shift distance in the z direction? ');
+    maxDis(1) = input('What is the x shift robustness? ');
+    maxDis(2) = input('What is the y shift robustness? ');
+    maxDis(3) = input('What is the z shift robustness? ');
 else
     maxDis(1) = varargin{2}(1);
     maxDis(2) = varargin{2}(2);

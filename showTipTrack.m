@@ -49,6 +49,7 @@ for t = tRange
     if exist(['SPM' num2str(spm, '%.2u') '/tipTrack.mat']) % If tipTrack file already exists, just use those x and y values
         x = tipLoc(t, 1);
         y = tipLoc(t, 2);
+        Imax = max(I, [], 3);
     else
         if ~(t==tRange(1)) % If it is the first time stamp, we have already loaded the image into the variable I
             I = microImInputRaw(spm, t, 2, 1);
@@ -65,8 +66,13 @@ for t = tRange
     if printCM==1
         I = microImInputRaw(spm, t, 1, 1);
         Imax = max(I, [], 3);
+        imwrite(imtranslate(((Imax-pmin)./(pmax-pmin)), delShift(end, :)), ['tiptrack_spm' num2str(spm, '%.2u') '_CM' num2str(printCM) '.tif'], 'writemode', 'append');
+    else
+        I = microImInputRaw(spm, t, 2, 1);
+        Imax = max(I, [], 3);
+        imwrite(imtranslate(Imax, delShift(end, :)), ['tiptrack_spm' num2str(spm, '%.2u') '_CM' num2str(printCM) '.tif'], 'writemode', 'append');
     end
-    imwrite(imtranslate(((Imax-pmin)./(pmax-pmin)), delShift(end, :)), ['tiptrack_spm' num2str(spm, '%.2u') '_CM' num2str(printCM) '.tif'], 'writemode', 'append');
+    
 end
     save(['SPM' num2str(spm, '%.2u') '/tipTrack'], 'delShift', 'tipLoc');
 end

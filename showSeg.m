@@ -154,7 +154,7 @@ switch(mode)
         randCol = rand(timeArray(t, 2)-timeArray(t, 1)+50, 3); % Create an array of random colors
         f = waitbar(0, 'Collecting segmentation info ...');
         rowS = size(Iseg, 1);
-        figure
+        ff = figure;
         for row = 1:rowS
             waitbar(row/rowS, f, ['Collecting segmentation info ... ' num2str(100*row/rowS, '%.2f'), '%']);
             for col = 1:size(Iseg, 2)
@@ -175,6 +175,15 @@ switch(mode)
                 end
             end
         end
+        
+        spmdir = ['SPM' num2str(spm, '%.2u')]; % Include a model of the root if it is available
+        maskimage = [spmdir '/MIDLINE/mask' num2str(t, '%.4u') '.tif'];
+        maskdata = [spmdir '/MIDLINE/ml' num2str(t, '%.4u') '.mat'];
+        
+        if exist(maskimage, 'file')&&exist(maskdata, 'file') % If the mask has been created, create a model
+            showModel(spm, t, ff);
+        end
+        
         
         close(f)
     case 'default'

@@ -6,7 +6,7 @@ function BVTseg3d( varargin )
 %requires a high capacity of RAM space to complete depending on how large
 %the images are.
 
-load('data_config');
+load('./data_config');
 disp('Segmenting GFP cluster information');
 clInfo = []; %Holds the information concerning the activity location 
 
@@ -45,7 +45,7 @@ for t=tRange
 %         I = I./maxp;
 %     end
     
-    [Ireg,CL] = gseg3(I,classObj,classObj.Sigma,xyratz); %Segment the regions
+    [Ireg,CL] = gseg3(I,classObj,classObj.Sigma,xyratz,t); %Segment the regions
     CLnum = size(CL);
     clInfo = [clInfo; CL zeros(CLnum(1),1)+t];
     if(size(CL,1)==0) %This happens if no regions are detected in a time stamp

@@ -5,7 +5,7 @@ function BVTmeasure( varargin )
 % BVTseg3d and makes measurements such as average pixel intensity and shape
 % of gene expression regions.
 
-load('data_config');
+load('./data_config');
 
 if(size(varargin,1)==0)
     spm = input('Which specimen do you want to measure? ');
@@ -26,12 +26,12 @@ load('zStacks');
 load('cell_location_information');
 sCL = size(clInfo);
 
-if exist('shape_info.mat') % If it already exists, just update the existing file instead of assuming all zeros to begin with
-    load('shape_info.mat')
-else
+% if exist('shape_info.mat') % If it already exists, just update the existing file instead of assuming all zeros to begin with
+%     load('shape_info.mat')
+% else
     shapeInfo = zeros(sCL(1),10);
     statsTot = zeros(tmEnd-tmStart-1,4);
-end
+% end
 
 disp('Doing mathematical shape representation of each cluster');
 for t=tRange

@@ -6,8 +6,8 @@ function BVTclassifier( mode, spm, T, cm, add )
 % segmentation, and the T variable is which time stamp an image will be
 % evaluated. 
 
-metName = input('Please name the file: ', 's');
-if~exist(metName)
+metName = input('Please name the classifier: ', 's');
+if ~exist(metName)
     mkdir(metName)
     dirCon = cell(2, 1);
     dirCon{1} = mode;
@@ -91,7 +91,7 @@ if ~add
             h2 = histogram(Crand2(Crand2(:, 2)==1, 1), 'facecolor', 'g', 'BinWidth', 1e-4);
             line([maxTH, maxTH], f.CurrentAxes.YLim);
             classObj.Biases = -maxTH;
-            save([metName '/' metName], 'classObj');
+            save([metName '/classifier'], 'classObj');
         case 'TH2' % This is for the case of having stained cell walls
             disp('Fitting data to a simple voxel threshold classification model');
             
@@ -110,7 +110,7 @@ if ~add
                 end
             end
             classObj.Biases = -maxTH;
-            save([metName '/' metName], 'classObj');
+            save([metName '/classifier'], 'classObj');
         case 'SVM-Y'
             Iy = zeros(S(1), S(2)); % Iy holds the y position
             for row = 1:S(1)
@@ -138,7 +138,7 @@ if ~add
             
             
             classObj.NNth = 0;
-            save([metName '/' metName], 'classObj');
+            save([metName '/classifier'], 'classObj');
         case 'NN'
             Iy = zeros(S(1), S(2)); % Iy holds the y position
             for row = 1:S(1)
@@ -174,7 +174,17 @@ if ~add
             scatter3(Xval(:, 1), Xval(:, 2), Z);
             classObj.NN = NN;
             classObj.NNth = maxTH;
-            save([metName '/' metName], 'classObj');
+            save([metName '/classifier'], 'classObj');
+        case 'LinearTH'
+            classObj.D = 1; % This classifier doesn't get trained, it gets tuned
+            classObj.Weights = [1, 1];
+            classObj.Biases = 1;
+            save([metName '/classifier'], 'classObj');
+        case 'AD-TH' % Adaptive threshold and threshold combination, gets tuned by showClassifier
+            classObj.D = 1;
+            classObj.Weights = [1, 1];
+            classObj.Biases = 1;
+            save([metName '/classifier'], 'classObj');
     end
 else
     I = microImInputRaw(spm, T, cm, 1);

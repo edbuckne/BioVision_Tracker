@@ -1,4 +1,4 @@
-function BVTconfig( )
+function BVTconfig( dirName, ask, xPix, zPix )
 % BVTconfig.m
 %
 %Highest level function in BVT framework.  This function takes in
@@ -31,13 +31,27 @@ end
 % cd ..
 
 % sprd = input('Is the GFP data at low contrast? (1 - yes, 0 - no) ');
-save_NAME = input('Input the name of classifier data: ', 's');
-if ~exist([save_NAME '/' save_NAME '.mat'])
-    error('Classifier file does not exist')
+if ~exist('dirName', 'var')
+    dirName = input('Input the name of classifier: ', 's');
 end
-load([save_NAME '/' save_NAME '.mat']);
-ask = input('Do you want to print a maximum projection time-course? (1-yes, 0 - no) ');
-if(ask==1)
+if ~exist([dirName '/' dirName '.mat'])
+    try 
+        load([dirName '/classifier.mat'])
+    catch
+        error('Classifier file does not exist')
+    end
+else
+    load([dirName '/' dirName '.mat']);
+end
+if ~exist('ask', 'var')
+    askin = input('Do you want to print a maximum projection time-course? (1-yes, 0 - no) ');
+    if askin == 1
+        ask = true;
+    else 
+        ask = false;
+    end
+end
+if(ask)
     spm = input('Which specimen do you want to print? ');
     ss = find(tSpm(:, 1)==spm);
     cmm = input('Which camera do you want to print? ');
@@ -59,9 +73,13 @@ clear ask
 % for t=tmStart:tmEnd
 %     TH(t) = THtmp;
 % end
-xPix = input('What is the pixel distance in microns for the x and y directions? ');
+if ~exist('xPix', 'var')
+    xPix = input('What is the pixel distance in microns for the x and y directions? ');
+end
 yPix = xPix;
-zPix = input('What is the pixel distance in microns for the z direction? ');
+if ~exist('zPix', 'var')
+    zPix = input('What is the pixel distance in microns for the z direction? ');
+end
 xyratz = zPix/xPix;
 
 clear I;

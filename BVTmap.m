@@ -1,12 +1,12 @@
 function BVTmap( varargin )
-% BVTmap.m
+% BVTmap(varargin)
 %
 % A highest level BVT function, connects the information collected from
 % BVTreconstruc and BVTseg3d and creates a data set where each element in
 % the clInfo variable is given the 3 metrics distance from root tip,
 % distance from root center, and angular position along the midline.
 
-load data_config
+load('./data_config');
 
 if(size(varargin,2)==0) % Get the specimen number
     spm = input('Which specimen do you want to map? ');
@@ -14,17 +14,18 @@ else
     spm = varargin{1};
 end
 
-sInd = find(tSpm(:, 1)==spm);
+sInd = find(tSpm(:, 1)==spm);  % Load the data collected from the BVT software
 tmStart = tSpm(sInd, 2); tmEnd = tSpm(sInd, 3);
-cd(['SPM' num2str(spm,'%.2u')]);
-load('cell_location_information.mat');
-if exist('delta_set.mat')
-load('delta_set')
+spmdir = ['SPM' num2str(spm,'%.2u')];
+% cd(['SPM' num2str(spm,'%.2u')]);
+load([spmdir '/cell_location_information.mat']);
+if exist([spmdir '/delta_set.mat'])
+    load([spmdir '/delta_set'])
 else
     delSet = [];
 end
-if exist('tipTrack.mat')  % If tip showTipTrack.m has not been ran on this specimen, use gfp shift
-    load('tipTrack')
+if exist([spmdir '/tipTrack.mat'])  % If tip showTipTrack.m has not been ran on this specimen, use gfp shift
+    load([spmdir '/tipTrack'])
     delShift02 = zeros(size(delShift, 1)-1, 2);
     for t = 1:size(delShift02, 1)
         delShift02(t, :) = delShift(t, :)-delShift(t+1, :);
@@ -42,19 +43,16 @@ for t = tmStart:tmEnd % Go through each time stamp
     if(timeArray(t, 1)==0 || isnan(timeArray(t, 1))) % Don't do anything if it is an empty array
         continue;
     end
-    if ~exist(['MIDLINE/ml' num2str(t, '%.4u') '.mat'])
+    if ~exist([spmdir '/MIDLINE/ml' num2str(t, '%.4u') '.mat'])
         continue;
     else
-        load(['MIDLINE/ml' num2str(t, '%.4u')]); % load the midline information
+        load([spmdir '/MIDLINE/ml' num2str(t, '%.4u')]); % load the midline information
     end
     exitVar = 1;
     updatePsi = 0;
     emptyS = 0;
     
-    if t==7
-        a = 0;
-    end
-    if exist('tipTrack.mat')
+    if exist([spmdir '/tipTrack.mat'])
         if tipLoc(t, 2)<length(S) %&& sqrt((tipLoc(t, 1)-S(end)).^2+(tipLoc(t, 2)-length(S)).^2)<100 % We only want to integrate to where the tip is
             yS = tipLoc(t, 2);
         else
@@ -63,6 +61,8 @@ for t = tmStart:tmEnd % Go through each time stamp
     else
         yS = length(S);
     end
+    
+    Itip = createtipmap(spm, t, S, yS);  % Create a tip map that creates an image of distance from tip
     
     while exitVar
         if t>1
@@ -87,17 +87,27 @@ for t = tmStart:tmEnd % Go through each time stamp
                 emptyS = 1;
             else
                 rho = sqrt(((clInfo(i, 1)-S(clInfo(i, 2))).*xPix)^2+(((clInfo(i, 3)-mZ)*zPix)^2)); % Radius from center
-                theta = atan(((clInfo(i, 3)-mZ)*zPix)/((clInfo(i, 1)-S(clInfo(i, 2))).*xPix)); % Angle from x-axis
+                zPos = ((clInfo(i, 3)-mZ)*zPix);
+                xPos = ((clInfo(i, 1)-S(clInfo(i, 2))).*xPix);
+                if (zPos>0)&&(xPos<0)
+                    theta = pi - atan(zPos/xPos);
+                elseif (zPos<0)&&(xPos<0)
+                    theta = -pi - atan(zPos/xPos);
+                else
+                    theta = atan(zPos/xPos); % Angle from x-axis
+                end
             end
             
             
             % Store values in cylCoord
             if updatePsi
-                cylCoord(i, 1) = psi.*xPix;
+%                 cylCoord(i, 1) = psi.*xPix;
+                cylCoord(i, 1) = Itip(clInfo(i, 2), clInfo(i, 1));
                 cylCoord(i, 2) = rho;
                 cylCoord(i, 3) = theta;
             else
-                cylCoord(i, 1) = psi.*xPix;
+%                 cylCoord(i, 1) = psi.*xPix;
+                cylCoord(i, 1) = Itip(clInfo(i, 2), clInfo(i, 1));
                 cylCoord(i, 2) = rho;
                 cylCoord(i, 3) = theta;
             end
@@ -151,7 +161,6 @@ for t = tmStart:tmEnd % Go through each time stamp
     
 end
 
-save('cylCoord', 'cylCoord')
-cd ..
+save([spmdir '/cylCoord'], 'cylCoord')
 end
 
