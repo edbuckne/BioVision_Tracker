@@ -5,7 +5,7 @@ function BVTimageunconfig( varargin )
 % .... Where is goes time_camera_view.tif.
 % Inputs:
 %   varargin{1}: Specimen to unpack files from
-run('set_path/setPath.m');
+% run('set_path/setPath.m');
 load('data_config.mat') % Must have a data_config file for this to work
 
 if ~isempty(varargin) % If we do have an argument come into the function

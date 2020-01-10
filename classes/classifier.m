@@ -10,6 +10,9 @@ classdef classifier
         Sigma
         NN
         NNth
+        LinCap
+        adthW % Adaptive threshold window size
+        adthP % Adaptive threshold percentage
     end
     
     methods
