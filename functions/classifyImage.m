@@ -28,6 +28,24 @@ elseif strcmp(CO.Type, 'SVM-Y')||strcmp(CO.Type, 'NN')
     end
     I1 = I; % Assign I1 and I2
     I2 = Iy;
+elseif strcmp(CO.Type, 'LinearTH')
+    S = size(I);
+    [~, ~, z] = meshgrid(1:S(2), 1:S(1), 1:S(3));  % Create an image that just contains the z stack number
+    
+    z(z < CO.LinCap(1)) = CO.LinCap(1);  % Bound the z parameter to stay between what was declared in training
+    z(z > CO.LinCap(2)) = CO.LinCap(2);
+    
+    Iclass = (CO.Weights(1) .* z + CO.Weights(2) - I) < 0;
+    return
+elseif strcmp(CO.Type, 'AD-TH') % Adaptive threshold and global threshold technique
+    S = size(I);
+    Iclass = zeros(S(1), S(2), S(3));
+    for z = 1:S(3)
+        Iadth = adaptthresh2(I(:, :, z), CO.adthW, CO.adthP);
+        Ith = I(:, :, z)>-CO.Biases;
+        Iclass(:, :, z) = Iadth.*Ith;
+    end
+    return
 end
 
 if strcmp(CO.Type, 'NN')

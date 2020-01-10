@@ -1,4 +1,4 @@
-function [ regIm, CL ] = gseg3( I, classObj, sigma, xzrat )
+function [ regIm, CL ] = gseg3( I, classObj, sigma, xzrat, t)
 %gseg3 is a function that segments all voxels above the pixel intensity of
 %TH (double value). Sigma is the standard deviation used in the gaussian
 %kernel filter.  xzrat is the ratio between the zStack physical step and
@@ -86,6 +86,12 @@ disp('Thresholding images');
 %     Ibw(:,:,z) = I(:,:,z)>TH; %Thresholding the image to mask only activity in the GFP channel
 % end
 Ibw = logical(classifyImage(classObj, I));
+if exist(['./MIDLINE/mask' num2str(t, '%.4u') '.tif'])  % If a mask exists, don't consider anything outside of the mask
+    Iroot = logical(imread(['./MIDLINE/mask' num2str(t, '%.4u') '.tif']));
+    for z = 1:size(Ibw, 3)
+        Ibw(:, :, z) = logical(Ibw(:, :, z).*Iroot);
+    end
+end
 Ibw_02 = logical(classifyImage(classObj, Iorig));
 xStep = Kp.*Gx.*Ibw; %Proportional gradients
 yStep = Kp.*Gy.*Ibw;
@@ -137,6 +143,7 @@ end
 %     end
 % end
 clear Ilog1
+Itrail = zeros(size(Ilog));
 
 CL = CL(1:(-sec)-1,:);
 CL(:,4) = CL(:,1); %This is so we can find minimums
@@ -156,8 +163,9 @@ for z=1:s(3) %Going through each element in the proportional gradient matrices
             xd = col; %Dynamic pixel starts at the static pixel location
             yd = row;
             zd = z;
-            while(Ilog(yd,xd,zd)==0) %As long as we are seeing pixels that have never seen activity
-                Ilog(yd,xd,zd) = trailId; %Mark trail
+            while(Ibw(yd, xd, zd)==1 && Itrail(yd,xd,zd)==0) %As long as we are seeing pixels that have never seen activity
+%                 Ilog(yd,xd,zd) = trailId; %Mark trail
+                Itrail(yd, xd, zd) = trailId;
                 
                 %Find new dynamic pixel
                 delx = xStep(yd,xd,zd); %New delta x and y
@@ -211,7 +219,7 @@ for z=1:s(3) %Going through each element in the proportional gradient matrices
                 trailId = trailId+1;
                 continue;
             end
-            if(Ibw(yd,xd,zd)==0||Ilog(yd,xd,zd)==trailId)
+            if(Ibw(yd,xd,zd)==0||Itrail(yd,xd,zd)==trailId)
                 disV = sqrt((CL(:,1)-col).^2+(CL(:,2)-row).^2+(CL(:,3).*xzrat-z*xzrat).^2); %Distance from COM locations
                 [~,location] = min(disV);
                 if isempty(location)
@@ -232,9 +240,9 @@ for z=1:s(3) %Going through each element in the proportional gradient matrices
 %                 trailM(trailId) = Ilog(yd,xd,zd);
             else %We have found an old trail
                 if trailId<(s(1)*s(2))
-                    trailM(trailId) = trailM(Ilog(yd,xd,zd));
+                    trailM(trailId) = trailM(Itrail(yd,xd,zd));
                 else
-                    trailM = [trailM; trailM(Ilog(yd,xd,zd))];
+                    trailM = [trailM; trailM(Itrail(yd,xd,zd))];
                 end
 %                 trailM(trailId) = trailM(Ilog(yd,xd,zd));
             end
