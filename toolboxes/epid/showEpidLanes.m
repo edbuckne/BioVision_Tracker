@@ -1,4 +1,4 @@
-function [Ilane, imz] = showEpidLanes(SPM, t, plot)
+function [Ilane, imz, f] = showEpidLanes(SPM, t, plot)
 % showEpidLanes.m prints the image of a specimen and overlayes the cell
 % lanes that have been detected as the epidermal lanes. Note: EPIDlane.m
 % must be run before this function can be called.
@@ -27,12 +27,13 @@ for i = 1:length(epidLanes) % Overlay epidermal lanes red
     line(epidLanes{i}(:, 1), epidLanes{i}(:, 2), 'Color', 'r');
 end
 
-if ~plot
-    close(f)
-end
-
 saveas(f, 'tmp.jpg');
 Ilane = im2double(imread('tmp.jpg'));
 delete('tmp.jpg');
+
+if ~plot
+    close(f)
+    f = [];
+end
 end
 

@@ -1,20 +1,21 @@
-function EPIDtz(varargin)
-% EPIDtz.m is the highest level function in the EPID toolbox. This
-% function analyzes the features of the epidermal cells detected by
-% EPIDcell to make a decision on the location of the transition
-% zone/elongation zone boundary
+function EPIDlane(varargin)
+% EPIDlane.m is the highest level function in the EPID toolbox. This
+% function detects and saves the lanes of epidermal cells. Data are saved
+% in SPMXX/EPID/lanesTTTT.mat. BVTreconstruct or BVTreconstructunet must be
+% ran before this function is run if evaluating data in BVT format.
 % INPUTS:
 %   varargin (varies) - Name, value pairs (see below)
-
 defaultSPM = 'all';
 defaultTimeSetting = 'all';
 defaultForeground = 'bright';
 defaultThreeDSetting = '3D';
 defaultTimeRange = 1;
 defaultMaskNetwork = 'UNET';
-defaultTZModel = 'tzMdl';
+defaultEpidModel = 'epidMdl';
 defaultImageSetting = 'BVT';
+defaultInputImage = [];
 defaultRedoMask = false;
+defaultRedoZStack = false;
 
 expectedTimeSetting = {'all', 'spec'};
 expectedForeground = {'dark', 'bright'};
@@ -25,8 +26,10 @@ p = inputParser();
 addParameter(p, 'SPM', defaultSPM);  % The number of the specimen
 addParameter(p, 'MaskNetwork', defaultMaskNetwork);  % The name of the .mat file that holds the semantic segmentation network
 addParameter(p, 'TimeRange', defaultTimeRange);  % Only read if the 'TimeSetting' is set to 'spec'. Tells which time stamps to evaluate
+addParameter(p, 'InputImage', defaultInputImage);  % Only read if the 'ImageSetting' is set to 'input'
 addParameter(p, 'RedoMask', defaultRedoMask); % This options tells the function to recalculate the mask or to use showMask
-addParameter(p, 'TZModel', defaultTZModel); % The model used for predicting the cell at the TZ/EZ boundary
+addParameter(p, 'EpidModel', defaultEpidModel); % The model used for predicting epidermal lanes
+addParameter(p, 'RedoZStack', defaultRedoZStack); % If this function has already been ran, no need to re-pick the z-stack to evaluate if this is false
 addParameter(p, 'TimeSetting', defaultTimeSetting, ...
     @(x) any(validatestring(x, expectedTimeSetting)));  % 'all' means all time stamps will be evaluated and 'spec' means a range has been specified
 addParameter(p, 'Foreground', defaultForeground, ...
@@ -40,7 +43,7 @@ parse(p, varargin{:});
 
 load('data_config.mat');
 
-if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory format
+if strcmp(p.Results.ImageSetting, 'BVT')||strcmp(p.Results.ImageSetting, 'input') % Evaluate images in the BVT directory format
     if ischar(p.Results.SPM) % Determine if all specimen, or just 1
         if strcmp(p.Results.SPM, 'all')
             spmlist = tSpm(:, 1)';
@@ -59,7 +62,7 @@ if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory 
         
         epidDir = [spmDir '/EPID']; % Ensure EPID directory is created
         if ~exist(epidDir, 'dir')
-            error('EPIDlane and EPIDcell must be run before EPIDtz');
+            mkdir(epidDir);
         end
         
         if strcmp(p.Results.TimeSetting, 'all') % Determine the time ranges for this specimen
@@ -73,17 +76,43 @@ if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory 
             error('Time range parameter error');
         end
         
-        try
-            for t = tlist % Go through all time stamps of this specimen
-                tSaveTZ = [epidDir '/tz' num2str(t, '%.4u')]; % Path to save tz data
-                
-                [Xdata, score, cw, qctz, tzpoints] = epidestimatetz(spm, t, 'TZModel', p.Results.TZModel);
-                
-                save(tSaveTZ, 'Xdata', 'score', 'cw', 'qctz', 'tzpoints'); % Save the data
+        for t = tlist % Go through all time stamps of this specimen
+            tSave = [epidDir '/lanes' num2str(t, '%.4u')]; % Path to save the data from this function
+            
+            if strcmp(p.Results.ImageSetting, 'BVT')
+                if p.Results.RedoZS
+                I3d = microImInputRaw(spm, t, 2, 1); % Grab the image
+                f = figure;
+                if length(size(I3d))==3 % 3D Image
+                    imshow3D(I3d);
+                    z = input('Which z stack should be used for lane detection? ');
+                    close(f);
+                    imz = I3d(:, :, z);
+                elseif length(size(I3d))==2 % 2D Image
+                    imz = I3d;
+                else
+                    error('Images must be 3D or 2D');
+                end
+            elseif strcmp(p.Results.ImageSetting, 'input')
+                imz = p.Results.InputImage;
             end
-        catch
-            warning('Something went wrong with this specimen, skipping');
-            continue;
+            
+            if strcmp(p.Results.Foreground, 'bright') % Get the negative of this image if bright foreground
+                imz = 1-imz;
+            end
+            
+            if p.Results.RedoMask
+                [allLanes, epidLanes, angl] = epidlanepredict(imz, spm, ...
+                    'MaskNetwork', p.Results.MaskNetwork, ...
+                    'EpidModel', p.Results.EpidModel);
+            else
+                [allLanes, epidLanes, angl] = epidlanepredict(imz, spm, ...
+                    'MaskNetwork', p.Results.MaskNetwork, ...
+                    'EpidModel', p.Results.EpidModel, ...
+                    'MaskMethod', 'input', ...
+                    'MaskIn', showMask(spm, t, false));
+            end
+            save(tSave, 'imz', 'angl', 'allLanes', 'epidLanes'); % Save the data
         end
     end
 elseif strcmp(p.Results.ImageSetting, 'directory') % Evaluate images in the current directory

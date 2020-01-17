@@ -15,6 +15,7 @@ defaultEpidModel = 'epidMdl';
 defaultImageSetting = 'BVT';
 defaultInputImage = [];
 defaultRedoMask = false;
+defaultRedoZStack = false;
 
 expectedTimeSetting = {'all', 'spec'};
 expectedForeground = {'dark', 'bright'};
@@ -28,6 +29,7 @@ addParameter(p, 'TimeRange', defaultTimeRange);  % Only read if the 'TimeSetting
 addParameter(p, 'InputImage', defaultInputImage);  % Only read if the 'ImageSetting' is set to 'input'
 addParameter(p, 'RedoMask', defaultRedoMask); % This options tells the function to recalculate the mask or to use showMask
 addParameter(p, 'EpidModel', defaultEpidModel); % The model used for predicting epidermal lanes
+addParameter(p, 'RedoZStack', defaultRedoZStack); % If this function has already been ran, no need to re-pick the z-stack to evaluate if this is false
 addParameter(p, 'TimeSetting', defaultTimeSetting, ...
     @(x) any(validatestring(x, expectedTimeSetting)));  % 'all' means all time stamps will be evaluated and 'spec' means a range has been specified
 addParameter(p, 'Foreground', defaultForeground, ...
@@ -40,8 +42,9 @@ addParameter(p, 'ImageSetting', defaultImageSetting, ...
 parse(p, varargin{:});
 
 load('data_config.mat');
+imzloaded = false;
 
-if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory format
+if strcmp(p.Results.ImageSetting, 'BVT')||strcmp(p.Results.ImageSetting, 'input') % Evaluate images in the BVT directory format
     if ischar(p.Results.SPM) % Determine if all specimen, or just 1
         if strcmp(p.Results.SPM, 'all')
             spmlist = tSpm(:, 1)';
@@ -75,22 +78,31 @@ if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory 
         end
         
         for t = tlist % Go through all time stamps of this specimen
-            tSave = [epidDir '/lanes' num2str(t, '%.4u')]; % Path to save the data from this function
+            tSave = [epidDir '/lanes' num2str(t, '%.4u') '.mat']; % Path to save the data from this function
             
-            I3d = microImInputRaw(spm, t, 2, 1); % Grab the image
-            f = figure;
-            if length(size(I3d))==3 % 3D Image
-                imshow3D(I3d);
-                z = input('Which z stack should be used for lane detection? ');
-                close(f);
-                imz = I3d(:, :, z);
-            elseif length(size(I3d))==2 % 2D Image
-                imz = I3d;
-            else
-                error('Images must be 3D or 2D');
+            if strcmp(p.Results.ImageSetting, 'BVT')
+                if (~p.Results.RedoZStack)&&(exist(tSave, 'file'))
+                    load(tSave, 'imz');
+                    imzloaded = true;
+                else
+                    I3d = microImInputRaw(spm, t, 2, 1); % Grab the image
+                    f = figure;
+                    if length(size(I3d))==3 % 3D Image
+                        imshow3D(I3d);
+                        z = input('Which z stack should be used for lane detection? ');
+                        close(f);
+                        imz = I3d(:, :, z);
+                    elseif length(size(I3d))==2 % 2D Image
+                        imz = I3d;
+                    else
+                        error('Images must be 3D or 2D');
+                    end
+                end
+            elseif strcmp(p.Results.ImageSetting, 'input')
+                imz = p.Results.InputImage;
             end
             
-            if strcmp(p.Results.Foreground, 'bright') % Get the negative of this image if bright foreground
+            if strcmp(p.Results.Foreground, 'bright')&&~imzloaded % Get the negative of this image if bright foreground
                 imz = 1-imz;
             end
             

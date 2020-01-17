@@ -1,4 +1,4 @@
-function showEpidCells(spm, t)
+function [f] = showEpidCells(spm, t)
 % showEpidCells(spm, t) - shows the detected cell walls in the epidermal
 % files indicated by the EPID toolbox. Must have called EPIDcell.m before
 % calling this function.

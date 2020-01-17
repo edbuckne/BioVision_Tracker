@@ -68,5 +68,14 @@ for i = 1:length(Y)
         epidLanes{end+1} = allLanes{i};
     end
 end
+
+if length(epidLanes)>2 % There should only be 2 epidermal lanes
+    elen = zeros(length(epidLanes), 1); % Collect how long each lane is
+    for i = 1:length(epidLanes)
+        elen(i) = size(epidLanes{i}, 1); % Store the length of this lane
+    end
+    [~, id] = sort(elen, 'Descend');
+    epidLanes = {epidLanes{id(1)}, epidLanes{id(2)}};
+end
 end
 

@@ -1,4 +1,4 @@
-function [Xdata, score] = epidestimatetz(spm, t, varargin)
+function [Xdata, score, cw, qctz, tzpoints] = epidestimatetz(spm, t, varargin)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 defaultTZModel = 'tzMdl';
@@ -28,17 +28,35 @@ features = 3; % Gather features for each point
 NepidLanes = length(epidLanes); % Number of epidermal lanes detected
 Xdata = cell(NepidLanes, 1); % Holds the features for each point
 score = cell(NepidLanes, 1); % Holds the scores from the model to predict the TZ
+cw = cell(NepidLanes, 1);
+qctz = zeros(length(score), 1);
+tzpoints = zeros(length(score), 2);
 for i = 1:NepidLanes
     cwPoints = epidLanes{i}(cwidx{i}==1, :); % Get the points of the cell walls in the epidermal file
     PlaneMu = cwPoints.*xPix; % Coordinates in microns
     Xtmp = zeros(size(PlaneMu, 1), features); % Holds the features
     [S, si] = sort(PlaneMu(:, 2), 'Descend'); % Sort the points by the y direction (largest to smallest)
     PlaneMu = [PlaneMu(si, 1), S];
+    cw{i} = cwPoints(si, :);
     
     PlaneDiff = [0; abs(diff(PlaneMu(:, 2)))]; % Get the derivative and filter
-    b = ones(1, 5)./5;
-    PD = filtfilt(b, 1, PlaneDiff);
+    
+    loop = true;
+    filtord = 5;
+    while (loop)&&(filtord>0)
+        try
+            b = ones(1, filtord)./filtord;
+            PD = filtfilt(b, 1, PlaneDiff);
+            loop = false;
+        catch
+            loop = true;
+            filtord = filtord-1;
+        end
+    end
     PDD = [0; diff(PD)];
+    PDDD = [0; diff(PDD)];
+    idl = 1:length(PDDD);
+    PDDD(idl<=2) = 0;
     cumData = zeros(length(PD), 2);
     for j = 1:size(cwPoints, 1)
         cumData(j, 1) = mean(PD(1:j));
@@ -47,10 +65,22 @@ for i = 1:NepidLanes
         Xtmp(j, 1) = PD(j); % First derivative
         Xtmp(j, 2) = PDD(j); % Second derivative
         Xtmp(j, 3) = (PD(j)-cumData(j, 1))./cumData(j, 2); % Normalized to all cells before
+%         if j==1
+%             continue;
+%         else
+%             Xtmp(j, 4) = PD(j)./PD(j-1);
+%         end
     end
+%     Xtmp(idl<=10, 4) = 0;
     Xdata{i} = Xtmp;
     score{i} = mdl(Xtmp')';
+    [~, maxid] = max(score{i});
+%     [Psort, isort] = sort(PDDD, 'Descend');
+%     maxid = isort(1);
+%     [~, maxid] = max(PDD);
+    maxid = maxid-1;
+    tzpoints(i, :) = cw{i}(maxid, :);
+    qctz(i) = itipup(tzpoints(i, 2), tzpoints(i, 1));
 end
 
 end
-
