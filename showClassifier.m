@@ -37,6 +37,10 @@ if strcmp(classObj.Type, 'TH')
             disp(['Current threshold is ' num2str(-classObj.Biases)])
             classObj.Biases = -input('What do you want to change the threshold to? ');
             continue;
+        elseif ~(inCom==1)&&~(inCom==0)
+            warning([num2str(inCom) ' is an invalid input, try again']);
+            inCom = 1;
+            continue;
         end
         inCom = input('Do you want to adjust the smoothing value (1-yes, 0-no)? ');
         if(inCom==1)
@@ -45,6 +49,10 @@ if strcmp(classObj.Type, 'TH')
             for z = 1:size(I, 3)
                 Ifilt(:, :, z) = imgaussfilt(I(:, :, z), classObj.Sigma); % Filter the images
             end
+        elseif ~(inCom==1)&&~(inCom==0)
+            warning([num2str(inCom) ' is an invalid input, try again']);
+            inCom = 1;
+            continue;
         end
     end
     save([dirName '/classifier'], 'classObj')
