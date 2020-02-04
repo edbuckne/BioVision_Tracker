@@ -12,13 +12,17 @@ defaultThreeDSetting = '3D';
 defaultTimeRange = 1;
 defaultMaskNetwork = 'UNET';
 defaultImageSetting = 'BVT';
+defaultCellWallDetection = 'Heuristics';
+defaultXPix = 0.69;
 defaultInputImage = [];
 defaultRedoMask = false;
+defaultRedoTipMap = false;
 
 expectedTimeSetting = {'all', 'spec'};
 expectedForeground = {'dark', 'bright'};
 expectedThreeDSetting = {'3D', '2D'};
 expectedImageSetting = {'BVT', 'directory', 'input'};
+expectedCellWallDetection = {'Heuristics', 'resnet21'};
 
 p = inputParser();
 addParameter(p, 'SPM', defaultSPM);  % The number of the specimen
@@ -26,6 +30,10 @@ addParameter(p, 'MaskNetwork', defaultMaskNetwork);  % The name of the .mat file
 addParameter(p, 'TimeRange', defaultTimeRange);  % Only read if the 'TimeSetting' is set to 'spec'. Tells which time stamps to evaluate
 addParameter(p, 'InputImage', defaultInputImage);  % Only read if the 'ImageSetting' is set to 'input'
 addParameter(p, 'RedoMask', defaultRedoMask); % This options tells the function to recalculate the mask or to use showMask
+addParameter(p, 'XPix', defaultXPix); % Scales the image to this resolution
+addParameter(p, 'RedoTipMap', defaultRedoTipMap); % Look for the tip map before trying to make another one to save time
+addParameter(p, 'CellWallDetection', defaultCellWallDetection, ...
+    @(x) any(validatestring(x, expectedCellWallDetection))); % Method for which to find the cell walls
 addParameter(p, 'TimeSetting', defaultTimeSetting, ...
     @(x) any(validatestring(x, expectedTimeSetting)));  % 'all' means all time stamps will be evaluated and 'spec' means a range has been specified
 addParameter(p, 'Foreground', defaultForeground, ...
@@ -37,7 +45,7 @@ addParameter(p, 'ImageSetting', defaultImageSetting, ...
 
 parse(p, varargin{:});
 
-load('data_config.mat');
+load('./data_config.mat');
 
 if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory format
     if ischar(p.Results.SPM) % Determine if all specimen, or just 1
@@ -83,7 +91,11 @@ if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory 
                 load(tLoad);
             end
             
-            [cwidx, igradx2, igrady2, itipup] = epidcellpredict(spm, t, imz, angl, epidLanes); % Predict the cell wall locations in the epidermal lanes
+            if strcmp(p.Results.CellWallDetection, 'Heuristics') % Detect cell walls depending on method
+                [cwidx, igradx2, igrady2, itipup] = epidcellpredict(spm, t, imz, angl, epidLanes, xPix, p.Results.XPix); % Predict the cell wall locations in the epidermal lanes
+            elseif strcmp(p.Results.CellWallDetection, 'resnet21')
+                [cwidx, igradx2, igrady2, itipup] = epidcellpredictresnet21(spm, t, imz, angl, epidLanes); % Predict the cell wall locations in the epidermal lanes
+            end
             
             save(tSave, 'cwidx', 'igradx2', 'igrady2', 'itipup'); % Save the data
             

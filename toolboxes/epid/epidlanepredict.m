@@ -34,6 +34,7 @@ addParameter(p, 'ImageSetting', defaultImageSetting, ...
 parse(p, imz, varargin{:});
 
 load('./data_config'); % Load configuration file
+xPix = p.Results.LateralResolution; % Change the resolution according to the scale
 
 ifilt = imgaussfilt(imz, 2);  % Filter the image
 

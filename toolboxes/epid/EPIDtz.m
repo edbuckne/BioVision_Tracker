@@ -15,6 +15,7 @@ defaultMaskNetwork = 'UNET';
 defaultTZModel = 'tzMdl';
 defaultImageSetting = 'BVT';
 defaultRedoMask = false;
+defaultCollectXData = false;
 
 expectedTimeSetting = {'all', 'spec'};
 expectedForeground = {'dark', 'bright'};
@@ -27,6 +28,7 @@ addParameter(p, 'MaskNetwork', defaultMaskNetwork);  % The name of the .mat file
 addParameter(p, 'TimeRange', defaultTimeRange);  % Only read if the 'TimeSetting' is set to 'spec'. Tells which time stamps to evaluate
 addParameter(p, 'RedoMask', defaultRedoMask); % This options tells the function to recalculate the mask or to use showMask
 addParameter(p, 'TZModel', defaultTZModel); % The model used for predicting the cell at the TZ/EZ boundary
+addParameter(p, 'CollectXData', defaultCollectXData); % If true, the XData from the cell boundaries are saved and the TZ is not estimated
 addParameter(p, 'TimeSetting', defaultTimeSetting, ...
     @(x) any(validatestring(x, expectedTimeSetting)));  % 'all' means all time stamps will be evaluated and 'spec' means a range has been specified
 addParameter(p, 'Foreground', defaultForeground, ...
@@ -53,6 +55,10 @@ if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory 
         error('Check your SPM variable. It should be ''all'' or a number');
     end
     
+    if p.Results.CollectXData % If collect x data option is true, create a variable to hold it
+        XD = [];
+        spmdata = [];
+    end
     for spm = spmlist % Go through all specimen
         spmDir = ['SPM' num2str(spm, '%.2u')];
         disp(spmDir); % Print which specimen is being evaluated
@@ -77,13 +83,22 @@ if strcmp(p.Results.ImageSetting, 'BVT') % Evaluate images in the BVT directory 
             for t = tlist % Go through all time stamps of this specimen
                 tSaveTZ = [epidDir '/tz' num2str(t, '%.4u')]; % Path to save tz data
                 
-                [Xdata, score, cw, qctz, tzpoints] = epidestimatetz(spm, t, 'TZModel', p.Results.TZModel);
+                [Xdata, score, cw, qctz, tzpoints] = epidestimatetz(spm, t, 'TZModel', ...
+                    p.Results.TZModel, 'CollectXData', p.Results.CollectXData);
                 
+                if p.Results.CollectXData
+                    XD = [XD; Xdata];
+                    spmdata = [spmdata; ones(size(Xdata, 1), 1).*spm];
+                else
                 save(tSaveTZ, 'Xdata', 'score', 'cw', 'qctz', 'tzpoints'); % Save the data
+                end
             end
         catch
             warning('Something went wrong with this specimen, skipping');
             continue;
+        end
+        if p.Results.CollectXData
+            save('XData_cell_walls', 'XD', 'spmdata');
         end
     end
 elseif strcmp(p.Results.ImageSetting, 'directory') % Evaluate images in the current directory

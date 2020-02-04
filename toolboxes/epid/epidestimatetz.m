@@ -2,9 +2,11 @@ function [Xdata, score, cw, qctz, tzpoints] = epidestimatetz(spm, t, varargin)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 defaultTZModel = 'tzMdl';
+defaultCollectXData = false;
 
 p = inputParser();
 addParameter(p, 'TZModel', defaultTZModel); % The model used for predicting the cell at the TZ/EZ boundary
+addParameter(p, 'CollectXData', defaultCollectXData); % If true, the XData from the cell boundaries are saved and the TZ is not estimated
 
 parse(p, varargin{:});
 
@@ -26,7 +28,11 @@ load('./data_config');
 features = 3; % Gather features for each point
 
 NepidLanes = length(epidLanes); % Number of epidermal lanes detected
-Xdata = cell(NepidLanes, 1); % Holds the features for each point
+if p.Results.CollectXData
+    Xdata = []; % Holds the x data differently if we are just collecting the points
+else
+    Xdata = cell(NepidLanes, 1); % Holds the features for each point
+end
 score = cell(NepidLanes, 1); % Holds the scores from the model to predict the TZ
 cw = cell(NepidLanes, 1);
 qctz = zeros(length(score), 1);
@@ -72,15 +78,22 @@ for i = 1:NepidLanes
 %         end
     end
 %     Xtmp(idl<=10, 4) = 0;
-    Xdata{i} = Xtmp;
-    score{i} = mdl(Xtmp')';
-    [~, maxid] = max(score{i});
+    if p.Results.CollectXData
+        Xdata = [Xdata; Xtmp]; % We are just collecting the data now
+        score = [];
+        qctz = [];
+        tzpoints = [];
+    else
+        Xdata{i} = Xtmp;
+        score{i} = mdl(Xtmp')';
+        [~, maxid] = max(score{i});
 %     [Psort, isort] = sort(PDDD, 'Descend');
 %     maxid = isort(1);
 %     [~, maxid] = max(PDD);
-    maxid = maxid-1;
-    tzpoints(i, :) = cw{i}(maxid, :);
-    qctz(i) = itipup(tzpoints(i, 2), tzpoints(i, 1));
+        maxid = maxid-1;
+        tzpoints(i, :) = cw{i}(maxid, :);
+        qctz(i) = itipup(tzpoints(i, 2), tzpoints(i, 1));
+    end
 end
 
 end

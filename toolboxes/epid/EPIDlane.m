@@ -13,6 +13,7 @@ defaultTimeRange = 1;
 defaultMaskNetwork = 'UNET';
 defaultEpidModel = 'epidMdl';
 defaultImageSetting = 'BVT';
+defaultXPix = 0.69;
 defaultInputImage = [];
 defaultRedoMask = false;
 defaultRedoZStack = false;
@@ -30,6 +31,7 @@ addParameter(p, 'InputImage', defaultInputImage);  % Only read if the 'ImageSett
 addParameter(p, 'RedoMask', defaultRedoMask); % This options tells the function to recalculate the mask or to use showMask
 addParameter(p, 'EpidModel', defaultEpidModel); % The model used for predicting epidermal lanes
 addParameter(p, 'RedoZStack', defaultRedoZStack); % If this function has already been ran, no need to re-pick the z-stack to evaluate if this is false
+addParameter(p, 'XPix', defaultXPix); % Scale the image so that each pixel has this resolution
 addParameter(p, 'TimeSetting', defaultTimeSetting, ...
     @(x) any(validatestring(x, expectedTimeSetting)));  % 'all' means all time stamps will be evaluated and 'spec' means a range has been specified
 addParameter(p, 'Foreground', defaultForeground, ...
@@ -41,7 +43,7 @@ addParameter(p, 'ImageSetting', defaultImageSetting, ...
 
 parse(p, varargin{:});
 
-load('data_config.mat');
+load('./data_config.mat');
 imzloaded = false;
 
 if strcmp(p.Results.ImageSetting, 'BVT')||strcmp(p.Results.ImageSetting, 'input') % Evaluate images in the BVT directory format
@@ -84,6 +86,7 @@ if strcmp(p.Results.ImageSetting, 'BVT')||strcmp(p.Results.ImageSetting, 'input'
                 if (~p.Results.RedoZStack)&&(exist(tSave, 'file'))
                     load(tSave, 'imz');
                     imzloaded = true;
+%                     imz = rescaleimz(imz, xPix, p.Results.XPix); % Scale the image so that it has this resolution
                 else
                     I3d = microImInputRaw(spm, t, 2, 1); % Grab the image
                     f = figure;
@@ -97,6 +100,7 @@ if strcmp(p.Results.ImageSetting, 'BVT')||strcmp(p.Results.ImageSetting, 'input'
                     else
                         error('Images must be 3D or 2D');
                     end
+                    imz = rescaleimz(imz, xPix, p.Results.XPix); % Scale the image so that it has this resolution
                 end
             elseif strcmp(p.Results.ImageSetting, 'input')
                 imz = p.Results.InputImage;
@@ -109,13 +113,15 @@ if strcmp(p.Results.ImageSetting, 'BVT')||strcmp(p.Results.ImageSetting, 'input'
             if p.Results.RedoMask
                 [allLanes, epidLanes, angl] = epidlanepredict(imz, spm, ...
                     'MaskNetwork', p.Results.MaskNetwork, ...
-                    'EpidModel', p.Results.EpidModel);
+                    'EpidModel', p.Results.EpidModel, ...
+                    'LateralResolution', p.Results.XPix);
             else
                 [allLanes, epidLanes, angl] = epidlanepredict(imz, spm, ...
                     'MaskNetwork', p.Results.MaskNetwork, ...
                     'EpidModel', p.Results.EpidModel, ...
                     'MaskMethod', 'input', ...
-                    'MaskIn', showMask(spm, t, false));
+                    'LateralResolution', p.Results.XPix, ...
+                    'MaskIn', round(rescaleimz(showMask(spm, t, false), xPix, p.Results.XPix)));
             end
             save(tSave, 'imz', 'angl', 'allLanes', 'epidLanes'); % Save the data
         end

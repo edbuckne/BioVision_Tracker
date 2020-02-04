@@ -4,6 +4,7 @@ function printTZ()
 
 load('./data_config'); 
 dirpath = 'EPID/TZ';
+qualpath = 'EPID/qual';
 
 if ~exist(dirpath, 'dir') % Make the directory if it doesn't exist
     mkdir(dirpath);
@@ -18,8 +19,19 @@ for spm = tSpm(1, 1):tSpm(end, 1) % Go through all specimen
     for t = tSpm(spm, 2):tSpm(spm, 3) % Go through all the time points for this specimen
         close all
         Ilane = showTZ(spm, t); % Collect the image that shows the detected transition zone
+        try
+            load(['SPM' num2str(spm, '%.2u') '/' qualpath num2str(t, '%.4u') '.mat']);
+            if qualpass
+                q = 'p';
+            else
+                q = 'f';
+            end
+        catch
+            warning('Quality file not found');
+            q = 'n';
+        end
         
-        saveas(Ilane, [dirpath '/SPM' num2str(spm, '%.2u') 'T' num2str(t, '%.4u') '.jpg']); % Write the file
+        saveas(Ilane, [dirpath '/' q 'SPM' num2str(spm, '%.2u') 'T' num2str(t, '%.4u') '.jpg']); % Write the file
     end
 end
 end
