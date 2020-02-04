@@ -14,7 +14,7 @@ for t = tVec % Go through the vector of time points to correct
     I = microImInputRaw(spm, t, cm, 1); % Take in the image
     % Imask = roipoly(spreadPixelRange(max(I, [], 3)));
     figure
-    imshow(spreadPixelRange(max(I, [], 3))./0.1);
+    imshow(spreadPixelRange(max(I, [], 3)));
     h = imfreehand;
     Imask = h.createMask();
     close all

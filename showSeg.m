@@ -79,6 +79,7 @@ switch(mode)
 %         Irgb(:, :, 3) = Irgb(:, :, 3).*ImmppC;
         
         f = figure;
+        Irgb2 = Irgb;
         imshow([cat(3, Immpp, Immpp, Immpp), Irgb]);
     case 'randTrack'
         if(size(varargin,2)>=2)
