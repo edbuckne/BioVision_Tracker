@@ -28,7 +28,11 @@ if ~add
         waitbar(i/NN, f, ['Randomly sampling images ... ' num2str(100*i/NN, '%.2f'), '%']);
         I = microImInputRaw(dirCon{2}(i, 1), dirCon{2}(i, 2), dirCon{2}(i, 3), 1); % Load the image
         S = size(I);
-        Im = im2double(imread([metName '/' num2str(i) '.tif'])); % Take in edited mask
+        try
+            Im = im2double(imread([metName '/' num2str(i) '.tif'])); % Take in edited mask
+        catch
+            continue;
+        end
         Imask = Im(:, :, 1)==1; % Partition the image into 2 classes
         Im = max(I, [], 3);
         
@@ -181,9 +185,10 @@ if ~add
             classObj.Biases = 1;
             save([metName '/classifier'], 'classObj');
         case 'AD-TH' % Adaptive threshold and threshold combination, gets tuned by showClassifier
-            classObj.D = 1;
-            classObj.Weights = [1, 1];
-            classObj.Biases = 1;
+            classObj.adthW = 15;  % Initial values for adaptive thresholding
+            classObj.adthP = 0.5;
+            classObj.Sigma = 2;
+            classObj.Biases = -0.5;
             save([metName '/classifier'], 'classObj');
     end
 else
