@@ -5,9 +5,9 @@ if ~exist('dirName', 'var')
     dirName = input('Input the name of classifier: ', 's');
 end
 try
-    load([dirName '/' dirName]);
+    load(['./' dirName '/' dirName]);
 catch
-    load([dirName '/classifier.mat']);
+    load(['./' dirName '/classifier.mat']);
 end
 
 
@@ -55,7 +55,7 @@ if strcmp(classObj.Type, 'TH')
             continue;
         end
     end
-    save([dirName '/classifier'], 'classObj')
+    save(['./' dirName '/classifier'], 'classObj')
     close all
 elseif strcmp(classObj.Type, 'SVM-Y')||strcmp(classObj.Type, 'NN') % Support vector machine with respect to Y location
     inCom = 1;
@@ -76,7 +76,7 @@ elseif strcmp(classObj.Type, 'SVM-Y')||strcmp(classObj.Type, 'NN') % Support vec
         end
         close all
     end
-    save([dirName '/classifier'], 'classObj')
+    save(['./' dirName '/classifier'], 'classObj')
 elseif strcmp(classObj.Type, 'LinearTH') % Linear threshold method with respect to the z stack
     linParam = zeros(2);  % 2x2 matrix that will hold the parameters for setting filtering and threshold with respect to the z-stack
     f = figure;
@@ -152,21 +152,21 @@ elseif strcmp(classObj.Type, 'LinearTH') % Linear threshold method with respect 
     classObj.Weights = inv([linParam(1, 1), 1; linParam(2, 1), 1])*linParam(:, 2);
     classObj.LinCap = [min(linParam(:, 1)), max(linParam(:, 1))];
     
-    save([dirName '/classifier'], 'classObj')
+    save(['./' dirName '/classifier'], 'classObj')
 elseif strcmp(classObj.Type, 'AD-TH') % Adaptive threshold and global threshold
-    classObj.adthW = 15;  % Initial values for adaptive thresholding
-    classObj.adthP = 0.5;
-    classObj.Sigma = 2;
-    classObj.Biases = -0.5;
+%     classObj.adthW = 15;  % Initial values for adaptive thresholding
+%     classObj.adthP = 0.5;
+%     classObj.Sigma = 2;
+%     classObj.Biases = -0.5;
     
     loop = true;
     
     while loop
         close all
-        Ithinit = classifyImage(classObj, max(Ifilt, [], 3));  % This method can only do 2D images
+        Ithinit = classifyImage(classObj, Ifilt);  % This method can only do 2D images at a time
         
         f = figure;
-        imshow([spreadPixelRange(max(I, [], 3)), Ithinit]);
+        imshow([spreadPixelRange(max(I, [], 3)), max(Ithinit, [], 3)]);
         opt1 = input('Which would you rather edit? (0 - None, 1 - [TH]Threshold/Standard Deviation, 2 - [AD]Window/Percentage): ');
         loop2 = true;
         
@@ -198,7 +198,12 @@ elseif strcmp(classObj.Type, 'AD-TH') % Adaptive threshold and global threshold
             while loop2
                 close all
                 figure
-                imshow([max(I, [], 3), adaptthresh2(max(Ifilt, [], 3), classObj.adthW, classObj.adthP)]);
+                Ithinit = Ifilt;
+                for z = 1:size(Ifilt, 3)
+                    T = adaptthresh(Ifilt(:, :, z), classObj.adthP, 'NeighborhoodSize', classObj.adthW);
+                    Ithinit(:, :, z) = imbinarize(Ifilt(:, :, z),T);
+                end
+                imshow([max(I, [], 3), max(Ithinit, [], 3)]);
                 inCom = input('Do you want to adjust the window shize (1-yes, 0-no)? ');
                 if(inCom==1)
                     disp(['Current window size is ' num2str(classObj.adthW)])
@@ -217,6 +222,6 @@ elseif strcmp(classObj.Type, 'AD-TH') % Adaptive threshold and global threshold
             continue;
         end
     end
-    save([dirName '/classifier'], 'classObj')
+    save(['./' dirName '/classifier'], 'classObj')
 end
 

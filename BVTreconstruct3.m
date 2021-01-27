@@ -1,10 +1,11 @@
-function BVTreconstruct(varargin)
-% BVTreconstruct.m
+function BVTreconstruct3(varargin)
+% BVTreconstruct3.m
 %
 % Highest level function on the BVT software pipeline. This function is
 % responsible for indicating and storing the midline information in
 % addition to storing a mask image of the specimen from the brightfield
-% channel.
+% channel. This version finds the mask in each z-stack and allows the user
+% to pick one.
 
 load('./data_config.mat');
 if(size(varargin,1)==0) % Get the specimen information
@@ -25,19 +26,24 @@ else
     tRange = tmStart:tmEnd;
 end 
 
-f = waitbar(0, 'Reconstructing surface');
-for t = tRange % Run this operation for each time stamp
-    prog = (t-tmStart+1)/(tmEnd-tmStart+1);
-    waitbar(prog, f, ['Reconstructing surface ' num2str(t) ' of ' num2str(tmEnd)]);
-    
+for t = tRange % Run this operation for each time stamp   
     I = microImInputRaw(SPM,t,2,1); % Load image from the data set
+    Imask = I;
+    for z = 1:size(I, 3)
+        [~, Imask(:, :, z)] = ATmidline(I(:, :, z)); % Create the mask image and calculate the midline
+    end
+    f = figure;
+    imshow3D([I, Imask]);
+    zin = input('Which z stack best represents the mask? ');
+    
+    [S, Imask] = ATmidline(I(:, :, zin));
+    
     mZ = round(size(I, 3)/2);
-    [S, Imask] = ATmidline(I); % Create the mask image and calculate the midline
     save(['MIDLINE/ml' num2str(t, '%.4u') '.mat'], 'S', 'mZ');
     imwrite(Imask, ['MIDLINE/mask' num2str(t, '%.4u') '.tif']);
+    close(f);
 end
 
-close(f)
 cd ..
 end
 

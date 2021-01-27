@@ -6,9 +6,9 @@ function BVTreconstructunet(SPM, varargin)
 % addition to storing a mask image of the specimen from a flourescent
 % channel showing stained cell walls.
 
-defaultTimeSetting = 'all';  
+defaultTimeSetting = 'all';
 defaultForeground = 'dark';
-defaultTimeRange = 1;  
+defaultTimeRange = 1;
 defaultMaskNetwork = 'UNET';
 
 expectedTimeSetting = {'all', 'spec'};
@@ -18,9 +18,9 @@ p = inputParser();
 addRequired(p, 'SPM');  % The number of the specimen
 addParameter(p, 'MaskNetwork', defaultMaskNetwork);  % The name of the .mat file that holds the semantic segmentation network
 addParameter(p, 'TimeRange', defaultTimeRange);  % Only read if the 'TimeSetting' is set to 'spec'. Tells which time stamps to evaluate
-addParameter(p, 'TimeSetting', defaultTimeSetting, ...  
+addParameter(p, 'TimeSetting', defaultTimeSetting, ...
     @(x) any(validatestring(x, expectedTimeSetting)));  % 'all' means all time stamps will be evaluated and 'spec' means a range has been specified
-addParameter(p, 'Foreground', defaultForeground, ...  
+addParameter(p, 'Foreground', defaultForeground, ...
     @(x) any(validatestring(x, expectedForeground)));  % 'dark' means the background of the image is dark while 'bright' means the opposite
 parse(p, SPM, varargin{:});
 
@@ -34,7 +34,7 @@ else
     tRange = p.Results.TimeRange;
 end
 
-cd(['SPM' num2str(SPM, '%.2u')]); % Go to specimen directory 
+cd(['SPM' num2str(SPM, '%.2u')]); % Go to specimen directory
 
 if ~exist('MIDLINE') % If the MIDLINE directory doesn't exist, create it
     mkdir MIDLINE
@@ -77,7 +77,28 @@ for i = 1:length(tRange) % Run this operation for each time stamp
         Imask = predictrootmaskunet(I, 'MaskNetwork', p.Results.MaskNetwork);
     end
     
+    Ith2 = Imask;
+    CC = bwconncomp(Ith2); % Find the connecting regions
+    
+    Imask = zeros(size(Ith2)); % Image to hold the mask
+    
+    if length(CC.PixelIdxList)>1 % There are more than one segmented island
+        maxSize = 0;
+        maxIdx = 0;
+        for i = 1:length(CC.PixelIdxList) % Find the biggest island and use that one
+            s = length(CC.PixelIdxList{i});
+            if s>maxSize
+                maxSize = s;
+                maxIdx = i;
+            end
+        end
+        Imask(CC.PixelIdxList{maxIdx}) = 1;
+    else % Use the only island we have
+        Imask(CC.PixelIdxList{1}) = 1;
+    end
+    
     S = calcMidline(Imask);
+    S = [(1:length(S))', S];
     save(['MIDLINE/ml' num2str(t, '%.4u') '.mat'], 'S', 'mZ');
     imwrite(Imask, ['MIDLINE/mask' num2str(t, '%.4u') '.tif']);
 end

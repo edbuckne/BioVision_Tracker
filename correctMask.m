@@ -25,12 +25,13 @@ for t = tVec % Go through the vector of time points to correct
     Ymask = double(Imask).*Y;
     Ytip = max(Ymask(:));
     x = 1:size(Imask, 2); % Finding the midline using the concept of expected value in a uniform distribution
-    Ymid = zeros(Ytip, 1);
-    for row = 1:Ytip
-        integ = sum(double(Imask(row, :)));
-        expOut = sum(x.*double(Imask(row, :))./integ);
-        Ymid(row) = round(expOut);
-    end
+%     Ymid = zeros(Ytip, 1);
+%     for row = 1:Ytip
+%         integ = sum(double(Imask(row, :)));
+%         expOut = sum(x.*double(Imask(row, :))./integ);
+%         Ymid(row) = round(expOut);
+%     end
+    Ymid = collectMidline(Ymask);
 %     if length(Ymid)<300
 %         S = [];
 %         Imask = Imask.*0;
@@ -38,7 +39,7 @@ for t = tVec % Go through the vector of time points to correct
 %     end
     S = Ymid; 
     hold on
-    plot(S, 1:length(S));
+    plot(S(:, 2), S(:, 1));
     mZ = round(size(I, 3)/2);
     
     if ~exist(['SPM' num2str(spm, '%.2u') '/MIDLINE'])

@@ -13,10 +13,10 @@ parse(p, varargin{:});
 load('./data_config'); % Load the configuration file
 
 if ischar(p.Results.SPMList) % Determine if all specimen, or just 1
-    if strcmp(p.Results.SPM, 'all')
+    if strcmp(p.Results.SPMList, 'all')
         spmlist = tSpm(:, 1)';
     else
-        error(['I''m not sure what you mean by ' p.Results.SPM ', this should be ''all'' or a number']);
+        error(['I''m not sure what you mean by ' p.Results.SPMList ', this should be ''all'' or a number']);
     end
 elseif isnumeric(p.Results.SPMList)
     spmlist = round(p.Results.SPMList);

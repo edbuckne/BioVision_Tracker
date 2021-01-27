@@ -32,9 +32,14 @@ end
 
 % sprd = input('Is the GFP data at low contrast? (1 - yes, 0 - no) ');
 if ~exist('dirName', 'var')
-    dirName = input('Input the name of classifier: ', 's');
+    dirName = input('Input the name of classifier (Press enter if there is none): ', 's');
 end
-if ~exist([dirName '/' dirName '.mat'])
+if isempty(dirName)
+    classObj = classifier; % Create object
+    classObj.Type = 'TH';
+    classObj.Sigma = 2;
+    classObj.Biases = -0.5;
+elseif ~exist([dirName '/' dirName '.mat'])
     try 
         load([dirName '/classifier.mat'])
     catch

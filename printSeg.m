@@ -63,6 +63,7 @@ for i = spmN
         
         close all
     end
+    close(f2)
 %     v = VideoWriter(['cellSeg/SPM' num2str(tSpm(i, 1), '%.2u') '_SEG_TRACK.avi']);
 %     v.FrameRate = 2;
 %     open(v)
